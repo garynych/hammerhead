@@ -1939,6 +1939,11 @@ config CPU_UNDERCLOCK
 	default n
 	help
 	  Krait underclocking
+config INTELLI_PLUG
+	bool "Enable intelli-plug cpu hotplug driver"
+	default n
+	help
+	  Generic Intelli-plug cpu hotplug driver for ARM SOCs
 
 config MSM_AVS_HW
 	bool "Enable Adaptive Voltage Scaling (AVS)"
