@@ -127,6 +127,175 @@ static void check_temp(struct work_struct *work)
 
 reschedule:
 	queue_delayed_work_on(0, wq, &check_temp_work, msecs_to_jiffies(250));
+
+	pr_warn("msm_thermal: Warning! Thermal guard disabled!");
+}
+
+static void enable_msm_thermal(void)
+{
+	enabled = 1;
+	/* make sure check_temp is running */
+	queue_delayed_work(check_temp_workq, &check_temp_work,
+			   msecs_to_jiffies(msm_thermal_info.poll_ms));
+
+	pr_info("msm_thermal: Thermal guard enabled.");
+}
+
+static int __ref set_enabled(const char *val, const struct kernel_param *kp)
+{
+	int ret = 0;
+
+	ret = param_set_bool(val, kp);
+	if (!enabled)
+		disable_msm_thermal();
+	else if (enabled == 1)
+		enable_msm_thermal();
+	else
+		pr_info("%s: no action for enabled = %d\n",
+				KBUILD_MODNAME, enabled);
+
+	pr_info("%s: enabled = %d\n", KBUILD_MODNAME, enabled);
+
+	return ret;
+}
+
+static struct kernel_param_ops module_ops = {
+	.set = set_enabled,
+	.get = param_get_bool,
+};
+
+module_param_cb(enabled, &module_ops, &enabled, 0644);
+MODULE_PARM_DESC(enabled, "enforce thermal limit on cpu");
+
+
+#ifdef CONFIG_SMP
+/* Call with core_control_mutex locked */
+static int __ref update_offline_cores(int val)
+{
+	int cpu = 0;
+	int ret = 0;
+
+	cpus_offlined = msm_thermal_info.core_control_mask & val;
+	if (!core_control_enabled)
+		return 0;
+
+	for_each_possible_cpu(cpu) {
+		if (!(cpus_offlined & BIT(cpu)))
+			continue;
+		if (!cpu_online(cpu))
+			continue;
+		ret = cpu_down(cpu);
+		if (ret)
+			pr_err("%s: Unable to offline cpu%d\n",
+				KBUILD_MODNAME, cpu);
+	}
+	return ret;
+}
+#else
+static int update_offline_cores(int val)
+{
+	return 0;
+}
+#endif
+
+static ssize_t show_cc_enabled(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return snprintf(buf, PAGE_SIZE, "%d\n", core_control_enabled);
+}
+
+static ssize_t __ref store_cc_enabled(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int ret = 0;
+	int val = 0;
+
+	mutex_lock(&core_control_mutex);
+	ret = kstrtoint(buf, 10, &val);
+	if (ret) {
+		pr_err("%s: Invalid input %s\n", KBUILD_MODNAME, buf);
+		goto done_store_cc;
+	}
+
+	if (core_control_enabled == !!val)
+		goto done_store_cc;
+
+	core_control_enabled = !!val;
+	if (core_control_enabled) {
+		pr_info("%s: Core control enabled\n", KBUILD_MODNAME);
+		register_cpu_notifier(&msm_thermal_cpu_notifier);
+		update_offline_cores(cpus_offlined);
+	} else {
+		pr_info("%s: Core control disabled\n", KBUILD_MODNAME);
+		unregister_cpu_notifier(&msm_thermal_cpu_notifier);
+	}
+
+done_store_cc:
+	mutex_unlock(&core_control_mutex);
+	return count;
+}
+
+static ssize_t show_cpus_offlined(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return snprintf(buf, PAGE_SIZE, "%d\n", cpus_offlined);
+}
+
+static ssize_t __ref store_cpus_offlined(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int ret = 0;
+	uint32_t val = 0;
+
+	mutex_lock(&core_control_mutex);
+	ret = kstrtouint(buf, 10, &val);
+	if (ret) {
+		pr_err("%s: Invalid input %s\n", KBUILD_MODNAME, buf);
+		goto done_cc;
+	}
+
+	if (enabled) {
+		pr_err("%s: Ignoring request; polling thread is enabled.\n",
+				KBUILD_MODNAME);
+		goto done_cc;
+	}
+
+	if (cpus_offlined == val)
+		goto done_cc;
+
+	update_offline_cores(val);
+done_cc:
+	mutex_unlock(&core_control_mutex);
+	return count;
+}
+
+static __refdata struct kobj_attribute cc_enabled_attr =
+__ATTR(enabled, 0644, show_cc_enabled, store_cc_enabled);
+
+static __refdata struct kobj_attribute cpus_offlined_attr =
+__ATTR(cpus_offlined, 0644, show_cpus_offlined, store_cpus_offlined);
+
+static __refdata struct attribute *cc_attrs[] = {
+	&cc_enabled_attr.attr,
+	&cpus_offlined_attr.attr,
+	NULL,
+};
+
+static __refdata struct attribute_group cc_attr_group = {
+	.attrs = cc_attrs,
+};
+
+static ssize_t show_wakeup_ms(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return snprintf(buf, PAGE_SIZE, "%d\n", wakeup_ms);
+}
+
+static ssize_t store_wakeup_ms(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int ret;
+	ret = kstrtouint(buf, 10, &wakeup_ms);
 }
 
 int __devinit msm_thermal_init(struct msm_thermal_data *pdata)
