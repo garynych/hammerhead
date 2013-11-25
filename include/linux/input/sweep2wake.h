@@ -27,7 +27,7 @@
 
 #define SWEEP2WAKE_I2C_SLEEP 40
 
-extern int s2w_switch;
+extern int s2w_switch, s2w_s2sonly;
 
 /* PowerKey setter */
 extern void sweep2wake_setdev(struct input_dev *);
