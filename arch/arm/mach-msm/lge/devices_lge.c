@@ -159,6 +159,21 @@ void __init lge_add_persistent_device(void)
 
 }
 
+#ifdef CONFIG_LGE_DIAG_ENABLE_SYSFS
+static struct platform_device lg_diag_cmd_device = {
+	.name = "lg_diag_cmd",
+	.id = -1,
+	.dev    = {
+		.platform_data = 0, /* &lg_diag_cmd_pdata */
+	},
+};
+
+void __init lge_add_diag_devices(void)
+{
+	platform_device_register(&lg_diag_cmd_device);
+}
+#endif
+
 /* setting whether uart console is enalbed or disabled */
 static unsigned int uart_console_mode = 1;  // Alway Off
 

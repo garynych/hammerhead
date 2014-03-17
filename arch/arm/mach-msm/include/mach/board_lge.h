@@ -72,6 +72,10 @@ extern void lge_set_uart_mode(unsigned int um);
 void __init lge_reserve(void);
 void __init lge_add_persistent_device(void);
 
+#ifdef CONFIG_LGE_DIAG_ENABLE_SYSFS
+void __init lge_add_diag_devices(void);
+#endif
+
 #if defined(CONFIG_LCD_KCAL)
 void __init lge_add_lcd_kcal_devices(void);
 #endif
