@@ -18,6 +18,7 @@
 #include <linux/spinlock.h>
 #include <linux/interrupt.h>
 #include <linux/cpufreq.h>
+#include <linux/tick.h>
 #include <linux/cpu.h>
 #include <linux/types.h>
 #include <linux/fs.h>
