@@ -1819,6 +1819,129 @@ done:
 	return ret;
 }
 
+/**
+ * _adreno_start - Power up the GPU and prepare to accept commands
+ * @adreno_dev: Pointer to an adreno_device structure
+ *
+ * The core function that powers up and initalizes the GPU.  This function is
+ * called at init and after coming out of SLUMBER
+ */
+static int _adreno_start(struct adreno_device *adreno_dev)
+{
+	struct kgsl_device *device = &adreno_dev->dev;
+	int status = -EINVAL;
+	unsigned int state = device->state;
+	unsigned int regulator_left_on = 0;
+
+	kgsl_cffdump_open(device);
+
+	kgsl_pwrctrl_set_state(device, KGSL_STATE_INIT);
+
+	regulator_left_on = (regulator_is_enabled(device->pwrctrl.gpu_reg) ||
+				(device->pwrctrl.gpu_cx &&
+				regulator_is_enabled(device->pwrctrl.gpu_cx)));
+
+	/* Clear any GPU faults that might have been left over */
+	adreno_clear_gpu_fault(adreno_dev);
+
+	/* Power up the device */
+	kgsl_pwrctrl_enable(device);
+
+	/* Set the bit to indicate that we've just powered on */
+	set_bit(ADRENO_DEVICE_PWRON, &adreno_dev->priv);
+
+	/* Set up a2xx special case */
+	if (adreno_is_a2xx(adreno_dev)) {
+		/*
+		 * the MH_CLNT_INTF_CTRL_CONFIG registers aren't present
+		 * on older gpus
+		 */
+		if (adreno_is_a20x(adreno_dev)) {
+			device->mh.mh_intf_cfg1 = 0;
+			device->mh.mh_intf_cfg2 = 0;
+		}
+
+		kgsl_mh_start(device);
+	}
+
+	status = kgsl_mmu_start(device);
+	if (status)
+		goto error_clk_off;
+
+	status = adreno_ocmem_gmem_malloc(adreno_dev);
+	if (status) {
+		KGSL_DRV_ERR(device, "OCMEM malloc failed\n");
+		goto error_mmu_off;
+	}
+
+	if (regulator_left_on && adreno_dev->gpudev->soft_reset) {
+		/*
+		 * Reset the GPU for A3xx. A2xx does a soft reset in
+		 * the start function.
+		 */
+		adreno_dev->gpudev->soft_reset(adreno_dev);
+	}
+
+	/* Start the GPU */
+	adreno_dev->gpudev->start(adreno_dev);
+
+	kgsl_pwrctrl_irq(device, KGSL_PWRFLAGS_ON);
+	device->ftbl->irqctrl(device, 1);
+
+	status = adreno_ringbuffer_cold_start(&adreno_dev->ringbuffer);
+	if (status)
+		goto error_irq_off;
+
+	status = adreno_perfcounter_start(adreno_dev);
+	if (status)
+		goto error_rb_stop;
+
+	/* Start the dispatcher */
+	adreno_dispatcher_start(device);
+
+	device->reset_counter++;
+
+	return 0;
+
+error_rb_stop:
+	adreno_ringbuffer_stop(&adreno_dev->ringbuffer);
+error_irq_off:
+	kgsl_pwrctrl_irq(device, KGSL_PWRFLAGS_OFF);
+
+error_mmu_off:
+	kgsl_mmu_stop(&device->mmu);
+
+error_clk_off:
+	kgsl_pwrctrl_disable(device);
+	/* set the state back to original state */
+	kgsl_pwrctrl_set_state(device, state);
+
+	return status;
+}
+
+static int _status;
+
+/**
+ * _adreno_start_work() - Work handler for the low latency adreno_start
+ * @work: Pointer to the work_struct for
+ *
+ * The work callbak for the low lantecy GPU start - this executes the core
+ * _adreno_start function in the workqueue.
+ */
+static void adreno_start_work(struct work_struct *work)
+{
+	struct adreno_device *adreno_dev = container_of(work,
+		struct adreno_device, start_work);
+	struct kgsl_device *device = &adreno_dev->dev;
+
+	/* Nice ourselves to be higher priority but not too high priority */
+	set_user_nice(current, _wake_nice);
+
+	mutex_lock(&device->mutex);
+	_status = _adreno_start(adreno_dev);
+	mutex_unlock(&device->mutex);
+}
+
 static int adreno_start(struct kgsl_device *device)
 {
 	int status = -EINVAL;
@@ -2412,7 +2535,7 @@ static int adreno_setproperty(struct kgsl_device *device,
 				adreno_dev->fast_hang_detect = 1;
 				kgsl_pwrscale_enable(device);
 			} else {
-				kgsl_pwrctrl_wake(device);
+				kgsl_pwrctrl_wake(device, 0);
 				device->pwrctrl.ctrl_flags = KGSL_PWR_ON;
 				adreno_dev->fast_hang_detect = 0;
 				kgsl_pwrscale_disable(device);

@@ -1400,7 +1400,7 @@ EXPORT_SYMBOL(kgsl_pwrctrl_sleep);
 
 /******************************************************************/
 /* Caller must hold the device mutex. */
-int kgsl_pwrctrl_wake(struct kgsl_device *device)
+int kgsl_pwrctrl_wake(struct kgsl_device *device, int priority)
 {
 	int status = 0;
 	unsigned int context_id;
@@ -1411,7 +1411,8 @@ int kgsl_pwrctrl_wake(struct kgsl_device *device)
 	kgsl_pwrctrl_request_state(device, KGSL_STATE_ACTIVE);
 	switch (device->state) {
 	case KGSL_STATE_SLUMBER:
-		status = device->ftbl->start(device);
+		status = device->ftbl->start(device, priority);
+
 		if (status) {
 			kgsl_pwrctrl_request_state(device, KGSL_STATE_NONE);
 			KGSL_DRV_ERR(device, "start failed %d\n", status);
@@ -1543,7 +1544,7 @@ int kgsl_active_count_get(struct kgsl_device *device)
 		wait_for_completion(&device->hwaccess_gate);
 		mutex_lock(&device->mutex);
 
-		ret = kgsl_pwrctrl_wake(device);
+		ret = kgsl_pwrctrl_wake(device, 0);
 	}
 	if (ret == 0)
 		atomic_inc(&device->active_cnt);
