@@ -1552,6 +1552,7 @@ static ssize_t exfat_direct_IO(int rw, struct kiocb *iocb, struct iov_iter *iter
 				loff_t offset)
 #else
 static ssize_t exfat_direct_IO(int rw, struct kiocb *iocb,
+#endif
 #ifdef CONFIG_AIO_OPTIMIZATION
 				struct iov_iter *iter, loff_t offset)
 #else
