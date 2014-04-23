@@ -24,7 +24,7 @@ fi;
 res1=$(date +%s.%N)
 echo "Starting Build !"
 
-make -j$NUMBEROFCPUS CONFIG_NO_ERROR_ON_MISMATCH=y CONFIG_DEBUG_SECTION_MISMATCH=y
+make -j$NUMBEROFCPUS CONFIG_NO_ERROR_ON_MISMATCH=y
 
 cp arch/arm/boot/zImage-dtb ../ramdisk/
 
@@ -40,7 +40,7 @@ rm -rf zImage
 
 cd ../aosp/
 
-zipfile="CharizardX-r47test-hammerhead.zip.zip"
+zipfile="CharizardX-nightly.zip"
 echo "Making flashable zip!"
 cp boot.img zip/
 
@@ -52,7 +52,7 @@ zip -r -9 $zipfile *
 rm -f /tmp/*.zip
 cp *.zip /tmp
 
-echo "READY TO FIGHT !!! \n\n"
+echo "READY TO FIGHT !!!"
 
-res2=$(date +%s.%N)
+res2=$(date +%s.%N)"
 echo "Total time elapsed: $(echo "($res2 - $res1) / 60"|bc ) minutes ($(echo "$res2 - $res1"|bc ) seconds)";
