@@ -4035,7 +4035,6 @@ unsigned int taiko_read(struct snd_soc_codec *codec,
 {
 	unsigned int val;
 	int ret;
-	int val;
 
 	if (reg == SND_SOC_NOPM)
 		return 0;

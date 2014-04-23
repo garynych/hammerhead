@@ -34,10 +34,12 @@
 #include <linux/workqueue.h>
 #include <linux/completion.h>
 #include <linux/cpu.h>
+#include <linux/tick.h>
 #include <linux/cpumask.h>
 #include <asm-generic/cputime.h>
 #include <linux/hrtimer.h>
 #include <linux/delay.h>
+#include <linux/rq_stats.h>
 #include <linux/export.h>
 #ifdef CONFIG_MSM_MPDEC_INPUTBOOST_CPUMIN
 #include <linux/input.h>
@@ -146,7 +148,21 @@ static struct msm_mpdec_tuners {
 static unsigned int NwNs_Threshold[8] = {12, 0, 20, 7, 25, 10, 0, 18};
 static unsigned int TwTs_Threshold[8] = {140, 0, 140, 190, 140, 190, 0, 190};
 
-extern unsigned int get_rq_info(void);
+extern unsigned int get_rq_info(void)
+{
+        unsigned long flags = 0;
+        unsigned int rq = 0;
+
+        spin_lock_irqsave(&rq_lock, flags);
+
+        rq = rq_info.rq_avg;
+        rq_info.rq_avg = 0;
+
+        spin_unlock_irqrestore(&rq_lock, flags);
+
+        return rq;
+}
+EXPORT_SYMBOL(get_rq_info);
 extern unsigned long acpuclk_get_rate(int);
 
 unsigned int state = MSM_MPDEC_IDLE;

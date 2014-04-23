@@ -18,6 +18,7 @@
 #include <linux/module.h>
 #include <linux/cpufreq.h>
 #include <mach/cpufreq.h>
+#include <linux/tick.h>
 #include <linux/lcd_notify.h>
 
 #define MSM_SLEEPER_MAJOR_VERSION	3
