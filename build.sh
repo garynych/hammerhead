@@ -26,9 +26,9 @@ echo "Starting Build !"
 
 make -j$NUMBEROFCPUS CONFIG_NO_ERROR_ON_MISMATCH=y
 
-cp arch/arm/boot/zImage-dtb ../ramdisk/
+cp arch/arm/boot/zImage-dtb ramdisk/
 
-cd ../ramdisk/
+cd ramdisk/
 
 echo "Making ramdisk !"
 ./mkbootfs boot.img-ramdisk | gzip > ramdisk.gz
@@ -38,13 +38,13 @@ echo "Making bootimg !"
 rm -rf ramdisk.gz
 rm -rf zImage
 
-cd ../aosp/
+cd ..
 
 zipfile="CharizardX-nightly.zip"
 echo "Making flashable zip!"
 cp boot.img zip/
 
-rm -rf ../ramdisk/boot.img
+rm -rf ramdisk/boot.img
 
 cd zip/
 rm -f *.zip
