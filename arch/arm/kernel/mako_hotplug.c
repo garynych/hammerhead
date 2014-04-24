@@ -24,11 +24,10 @@
 #include <linux/platform_device.h>
 #include <linux/timer.h>
 #include <linux/cpufreq.h>
+#include <linux/tick.h>
 #include <linux/delay.h>
 #include <linux/input.h>
 #include <linux/jiffies.h>
-#include <linux/kernel_stat.h>
-#include <linux/tick.h>
 #include <linux/lcd_notify.h>
 
 #define MAKO_HOTPLUG "mako_hotplug"
@@ -45,12 +44,21 @@
 
 extern bool boosted;
 
-static inline u64 get_cpu_idle_time_jiffy(unsigned int cpu,
-						  u64 *wall)
+static struct cpu_stats
 {
-	u64 idle_time;
-	u64 cur_wall_time;
-	u64 busy_time;
+	unsigned int counter[2];
+	u64 timestamp[2];
+	struct notifier_block notif;
+} stats = {
+	.counter = {0},
+};
+
+static inline cputime64_t get_cpu_idle_time_jiffy(unsigned int cpu,
+							cputime64_t *wall)
+{
+	cputime64_t idle_time;
+	cputime64_t cur_wall_time;
+	cputime64_t busy_time;
 
 	cur_wall_time = jiffies64_to_cputime64(get_jiffies_64());
 
@@ -63,21 +71,19 @@ static inline u64 get_cpu_idle_time_jiffy(unsigned int cpu,
 
 	idle_time = cur_wall_time - busy_time;
 	if (wall)
-		*wall = jiffies_to_usecs(cur_wall_time);
+		*wall = (cputime64_t)jiffies_to_usecs(cur_wall_time);
 
-	return jiffies_to_usecs(idle_time);
+	return (cputime64_t)jiffies_to_usecs(idle_time);
 }
 
 static inline cputime64_t get_cpu_idle_time(unsigned int cpu, cputime64_t *wall)
 {
-    u64 idle_time = get_cpu_idle_time_us(cpu, NULL);
+	u64 idle_time = get_cpu_idle_time_us(cpu, wall);
 
-    if (idle_time == -1ULL)
-	return get_cpu_idle_time_jiffy(cpu, wall);
-    else
-	idle_time += get_cpu_iowait_time_us(cpu, wall);
+	if (idle_time == -1ULL)
+		return get_cpu_idle_time_jiffy(cpu, wall);
 
-    return idle_time;
+	return idle_time;
 }
 
 static inline cputime64_t get_cpu_iowait_time(unsigned int cpu, cputime64_t *wall)
@@ -89,15 +95,6 @@ static inline cputime64_t get_cpu_iowait_time(unsigned int cpu, cputime64_t *wal
 
     return iowait_time;
 }
-
-static struct cpu_stats
-{
-	unsigned int counter[2];
-	u64 timestamp[2];
-	struct notifier_block notif;
-} stats = {
-	.counter = {0},
-};
 
 struct hotplug_tunables
 {
@@ -143,32 +140,6 @@ struct hotplug_tunables
 static struct workqueue_struct *wq;
 static struct delayed_work decide_hotplug;
 static struct work_struct suspend, resume;
-
-static inline int get_cpu_load(unsigned int cpu)
-{
-	struct cpu_load_data *pcpu = &per_cpu(cpuload, cpu);
-	struct cpufreq_policy policy;
-	u64 cur_wall_time, cur_idle_time;
-	unsigned int idle_time, wall_time;
-	unsigned int cur_load;
-
-	cpufreq_get_policy(&policy, cpu);
-
-	cur_idle_time = get_cpu_idle_time(cpu, &cur_wall_time);
-
-	wall_time = (unsigned int) (cur_wall_time - pcpu->prev_cpu_wall);
-	pcpu->prev_cpu_wall = cur_wall_time;
-
-	idle_time = (unsigned int) (cur_idle_time - pcpu->prev_cpu_idle);
-	pcpu->prev_cpu_idle = cur_idle_time;
-
-	if (unlikely(!wall_time || wall_time < idle_time))
-		return 0;
-
-	cur_load = 100 * (wall_time - idle_time) / wall_time;
-
-	return (cur_load * policy.cur) / policy.max;
-}
 
 static void cpu_revive(unsigned int cpu)
 {

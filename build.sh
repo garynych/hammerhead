@@ -33,7 +33,7 @@ cd ramdisk/
 echo "Making ramdisk !"
 ./mkbootfs boot.img-ramdisk | gzip > ramdisk.gz
 echo "Making bootimg !"
-./mkbootimg --kernel zImage-dtb --cmdline 'console=ttyHSL0,115200,n8 androidboot.hardware=hammerhead user_debug=31 msm_watchdog_v2.enable=1' --base 0x00000000 --pagesize 2048 --ramdisk_offset 0x02900000 --tags_offset 0x02700000 --ramdisk ramdisk.gz --output ../aosp/boot.img
+./mkbootimg --kernel zImage-dtb --cmdline 'console=ttyHSL0,115200,n8 androidboot.hardware=hammerhead user_debug=31 msm_watchdog_v2.enable=1' --base 0x00000000 --pagesize 2048 --ramdisk_offset 0x02900000 --tags_offset 0x02700000 --ramdisk ramdisk.gz --output ../boot.img
 
 rm -rf ramdisk.gz
 rm -rf zImage
@@ -51,8 +51,9 @@ rm -f *.zip
 zip -r -9 $zipfile *
 rm -f /tmp/*.zip
 cp *.zip /tmp
+cd ..
 
 echo "READY TO FIGHT !!!"
 
-res2=$(date +%s.%N)"
+res2=$(date +%s.%N)
 echo "Total time elapsed: $(echo "($res2 - $res1) / 60"|bc ) minutes ($(echo "$res2 - $res1"|bc ) seconds)";
