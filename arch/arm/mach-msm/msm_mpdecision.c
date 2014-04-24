@@ -814,7 +814,7 @@ static ssize_t show_enabled(struct kobject *a, struct attribute *b,
 		enabled = 1;
 		break;
 	default:
-		enabled = 333;
+		enabled = 1;
 	}
 	return sprintf(buf, "%u\n", enabled);
 }
@@ -961,7 +961,7 @@ static ssize_t store_enabled(struct kobject *a, struct attribute *b,
 		enabled = 1;
 		break;
 	default:
-		enabled = 333;
+		enabled = 1;
 	}
 
 	if (buf[0] == enabled)
