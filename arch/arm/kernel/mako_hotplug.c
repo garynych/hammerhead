@@ -27,12 +27,8 @@
 #include <linux/delay.h>
 #include <linux/input.h>
 #include <linux/jiffies.h>
-<<<<<<< HEAD
-=======
 #include <linux/kernel_stat.h>
 #include <linux/tick.h>
-
->>>>>>> 93ed5f3... fixed build warnings
 #include <linux/lcd_notify.h>
 
 #define MAKO_HOTPLUG "mako_hotplug"
@@ -148,8 +144,6 @@ static struct workqueue_struct *wq;
 static struct delayed_work decide_hotplug;
 static struct work_struct suspend, resume;
 
-<<<<<<< HEAD
-=======
 static inline int get_cpu_load(unsigned int cpu)
 {
 	struct cpu_load_data *pcpu = &per_cpu(cpuload, cpu);
@@ -176,7 +170,6 @@ static inline int get_cpu_load(unsigned int cpu)
 	return (cur_load * policy.cur) / policy.max;
 }
 
->>>>>>> 93ed5f3... fixed build warnings
 static void cpu_revive(unsigned int cpu)
 {
 	cpu_up(cpu);
