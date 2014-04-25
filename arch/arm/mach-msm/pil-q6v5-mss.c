@@ -84,8 +84,6 @@
 
 #define STOP_ACK_TIMEOUT_MS		1000
 
-bool ignore_errors_by_subsys_modem_restart = false;
-
 struct mba_data {
 	void __iomem *rmb_base;
 	void __iomem *io_clamp_reg;

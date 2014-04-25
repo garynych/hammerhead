@@ -43,8 +43,6 @@
 #endif
 #include "smd_private.h"
 
-extern bool ignore_errors_by_subsys_modem_restart;
-
 static int enable_debug;
 module_param(enable_debug, int, S_IRUGO | S_IWUSR);
 
@@ -168,10 +166,6 @@ struct subsys_device {
 	bool crashed;
 };
 
-#ifdef CONFIG_MACH_LGE
-static int modem_reboot_cnt;
-#endif
-
 static struct subsys_device *to_subsys(struct device *d)
 {
 	return container_of(d, struct subsys_device, dev);
@@ -267,10 +261,6 @@ static DEFINE_IDA(subsys_ida);
 
 static int enable_ramdumps;
 module_param(enable_ramdumps, int, S_IRUGO | S_IWUSR);
-
-#ifdef CONFIG_MACH_LGE
-module_param(modem_reboot_cnt, int, S_IRUGO | S_IWUSR);
-#endif
 
 struct workqueue_struct *ssr_wq;
 
@@ -840,35 +830,6 @@ int subsystem_restart(const char *name)
 	return ret;
 }
 EXPORT_SYMBOL(subsystem_restart);
-
-int subsys_modem_restart(void)
-{
-	int ret;
-	int rsl;
-	struct subsys_tracking *track;
-
-	struct subsys_device *dev = find_subsys("modem");
-
-	if (!dev)
-		return -ENODEV;
-
-	track = subsys_get_track(dev);
-
-	if (dev->track.state != SUBSYS_ONLINE ||
-		track->p_state != SUBSYS_NORMAL)
-		return -ENODEV;
-
-	rsl = dev->restart_level;
-	dev->restart_level = RESET_SUBSYS_COUPLED;
-	ignore_errors_by_subsys_modem_restart = true; //                         
-	ret = subsystem_restart_dev(dev);
-	dev->restart_level = rsl;
-	modem_reboot_cnt--;
-
-	put_device(&dev->dev);
-	return ret;
-}
-EXPORT_SYMBOL(subsys_modem_restart);
 
 int subsystem_crashed(const char *name)
 {

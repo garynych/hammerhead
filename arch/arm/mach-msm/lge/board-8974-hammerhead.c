@@ -194,10 +194,6 @@ void __init msm8974_add_drivers(void)
 #else
 	msm_thermal_device_init();
 #endif
-
-#ifdef CONFIG_LGE_DIAG_ENABLE_SYSFS
-	lge_add_diag_devices();
-#endif
 	lge_add_persistent_device();
 #if defined (CONFIG_BCMDHD) || defined (CONFIG_BCMDHD_MODULE)
 	init_bcm_wifi();
