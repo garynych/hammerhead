@@ -127,3 +127,13 @@ config BRICKED_THERMAL
 	  This enables thermal monitoring capability in the kernel.
 	  Monitors TSENS temperature and limits the max frequency of the cores.
 	  This replaces the qcom msm_thermal when defined!
+
+config CXK_THERMAL
+	tristate "CharizardX Kernel thermal monitor based on qcom msm_thermal"
+	depends on THERMAL_TSENS8960 || THERMAL_TSENS8974
+	depends on CPU_FREQ_MSM
+	default n
+	help
+	  This enables thermal monitoring capability in the kernel.
+	  Monitors TSENS temperature and limits the max frequency of the cores.
+	  This replaces the qcom msm_thermal and bricked thermal when defined!
