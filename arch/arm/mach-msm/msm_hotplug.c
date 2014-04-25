@@ -20,7 +20,6 @@
 #include <linux/timer.h>
 #include <linux/slab.h>
 #include <linux/cpufreq.h>
-#include <linux/tick.h>
 #include <linux/lcd_notify.h>
 #include <linux/input.h>
 #include <linux/math64.h>
