@@ -1,0 +1,3 @@
+#!/system/bin/sh
+echo 1 > /sys/module/qpnp_power_on/parameters/pwrkey_suspend;
+echo 15 > /sys/android_touch/wake_timeout;
