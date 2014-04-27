@@ -1913,6 +1913,14 @@ config MSM_MPDEC_INPUTBOOST_CPUMIN
 	help
 	  This pushes the cpu min speed to predefined values on input events.
 
+config MSM_HOTPLUG
+	bool "MSM hotplug driver"
+	depends on HOTPLUG_CPU
+	default y
+	help
+	  The MSM hotplug driver controls on-/offlining of additional cores based
+	  on current cpu load.
+
 if CPU_FREQ_MSM
 
 config MSM_CPU_FREQ_SET_MIN_MAX

@@ -6,6 +6,34 @@
 
 #include "cpupri.h"
 
+/* Copyright (c) 2012, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/*
+ * Scheduler hook for average runqueue determination
+ */
+#include <linux/module.h>
+#include <linux/percpu.h>
+#include <linux/hrtimer.h>
+#include <linux/sched.h>
+#include <linux/math64.h>
+
+static DEFINE_PER_CPU(u64, nr_prod_sum);
+static DEFINE_PER_CPU(u64, last_time);
+static DEFINE_PER_CPU(u64, nr);
+static DEFINE_PER_CPU(unsigned long, iowait_prod_sum);
+static DEFINE_PER_CPU(spinlock_t, nr_lock) = __SPIN_LOCK_UNLOCKED(nr_lock);
+static s64 last_get_time;
+
 extern __read_mostly int scheduler_running;
 
 extern unsigned int sysctl_sched_ravg_window;
